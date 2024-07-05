@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>たまご</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-image: url('images/background.jpg'); /* 背景画像を設定 */
+            background-size: cover; /* 画像を画面全体にカバー */
+            background-attachment: fixed; /* 背景画像を固定 */
+            background-position: center; /* 画像を中央に配置 */
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            background-color: white; /* 背景色を白に設定 */
+            color: black; /* テキストの色を黒に設定 */
+            display: inline-block; /* コンテンツの幅に合わせて背景を調整 */
+            padding: 10px; /* 内側の余白を設定 */
+            border-radius: 10px; /* 角を丸くする */
+        }
+        #result img {
+            max-width: 150px; /* ここで画像の最大幅を設定 */
+            height: auto; /* 高さを自動調整 */
+            margin-top: 10px;
+        }
+        #inventory {
+            margin-top: 20px;
+            font-size: 18px;
+            background-color: white; /* 背景色を白に設定 */
+            color: black; /* テキストの色を黒に設定 */
+            display: none; /* 初期状態では非表示 */
+            padding: 10px; /* 内側の余白を設定 */
+            border-radius: 10px; /* 角を丸くする */
+            max-width: 90%; /* 最大幅を設定 */
+            display: flex; /* フレックスボックスレイアウトを適用 */
+            flex-wrap: wrap; /* アイテムを折り返す */
+            justify-content: center; /* アイテムを中央揃え */
+            margin-left: auto; /* 左右中央揃え */
+            margin-right: auto; /* 左右中央揃え */
+        }
+        #inventory div {
+            margin: 10px; /* アイテム間の余白を設定 */
+        }
+        #inventory img {
+            max-width: 50px; /* インベントリ内の画像の最大幅を設定 */
+            height: auto; /* 高さを自動調整 */
+            cursor: pointer; /* クリック可能にする */
+        }
+        #largeImage {
+            display: none; /* 初期状態では非表示 */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        #largeImage img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #largeImageClose {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="font-size: 48px; font-weight: bold; text-shadow: 2px 2px 4px #000;">たまご</h1>
+    <button onclick="spinGacha()">たまごを孵化させる</button>
+    <div id="result"></div>
+    <button onclick="toggleInventory()">インベントリを表示/非表示</button>
+    <div id="inventory"></div>
+    <div id="largeImage">
+        <span id="largeImageClose" onclick="closeLargeImage()">×</span>
+        <img id="largeImageContent" src="" alt="Large Image">
+    </div>
+
+    <script>
+        // 動物のデータを設定
+        const animals = [
+            { name: 'ゴリラ', images: { 'ベビー': 'images/gorilla_baby.jpg', 'ヤング': 'images/gorilla_young.jpg', 'キング': 'images/gorilla_king.jpg' } },
+            { name: 'ライオン', images: { 'ベビー': 'images/lion_baby.jpg', 'ヤング': 'images/lion_young.jpg', 'キング': 'images/lion_king.jpg' } },
+            { name: 'ラビット', images: { 'ベビー': 'images/rabbit_baby.jpg', 'ヤング': 'images/rabbit_young.jpg', 'キング': 'images/rabbit_king.jpg' } },
+            { name: 'ドッグ', images: { 'ベビー': 'images/dog_baby.jpg', 'ヤング': 'images/dog_young.jpg', 'キング': 'images/dog_king.jpg' } },
+            { name: 'クロコダイル', images: { 'ベビー': 'images/crocodile_baby.jpg', 'ヤング': 'images/crocodile_young.jpg', 'キング': 'images/crocodile_king.jpg' } }
+        ];
+
+        // レアリティの確率を設定
+        const rarities = [
+            { name: 'ベビー', probability: 0.85 },
+            { name: 'ヤング', probability: 0.12 },
+            { name: 'キング', probability: 0.03 }
+        ];
+
+        // ステータスの範囲を設定
+        const statNames = ['腕力', '体力', '敏捷性', '知性', '可愛らしさ'];
+        const statRange = [1, 8];
+
+        // インベントリを格納する配列を作成
+        const inventory = [];
+
+        // ランダムなステータス値を生成する関数
+        function getRandomStat(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // レアリティを決定する関数
+        function getRarity() {
+            const randomNum = Math.random();
+            let cumulativeProbability = 0;
+            for (const rarity of rarities) {
+                cumulativeProbability += rarity.probability;
+                if (randomNum < cumulativeProbability) {
+                    return rarity.name;
+                }
+            }
+            return rarities[rarities.length - 1].name; // デフォルトで最後のレアリティを返す
+        }
+
+        // インベントリを表示する関数
+        function displayInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            inventoryDiv.innerHTML = '';
+            inventory.forEach(item => {
+                inventoryDiv.innerHTML += `<div>${item.rarity}レアリティの${item.animal.name}<br>ステータス: ${JSON.stringify(item.stats)}<br><img src="${item.animal.images[item.rarity]}" alt="${item.animal.name}" onclick="showLargeImage('${item.animal.images[item.rarity]}')"></div>`;
+            });
+        }
+
+        // ガチャを回す関数
+        function spinGacha() {
+            // 動物をランダムに選ぶ
+            const animal = animals[Math.floor(Math.random() * animals.length)];
+
+            // レアリティを決定する
+            const rarity = getRarity();
+
+            // ステータスをランダムに設定
+            const stats = {};
+            for (const statName of statNames) {
+                stats[statName] = getRandomStat(statRange[0], statRange[1]);
+            }
+
+            // 結果を表示
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `あなたは${rarity}レアリティの${animal.name}を手に入れました！<br>ステータス: ${JSON.stringify(stats)}<br><img src="${animal.images[rarity]}" alt="${animal.name}">`;
+
+            // インベントリに追加
+            inventory.push({ animal, rarity, stats });
+
+            // インベントリを表示
+            displayInventory();
+        }
+
+        // インベントリの表示・非表示を切り替える関数
+        function toggleInventory() {
+            const inventoryDiv = document.getElementById('inventory');
+            if (inventoryDiv.style.display === 'none' || inventoryDiv.style.display === '') {
+                inventoryDiv.style.display = 'flex';
+            } else {
+                inventoryDiv.style.display = 'none';
+            }
+        }
+
+        // 大きな画像を表示する関数
+        function showLargeImage(src) {
+            const largeImageDiv = document.getElementById('largeImage');
+            const largeImageContent = document.getElementById('largeImageContent');
+            largeImageContent.src = src;
+            largeImageDiv.style.display = 'block';
+        }
+
+       // 大きな画像を閉じる関数
+        function closeLargeImage() {
+            const largeImageDiv = document.getElementById('largeImage');
+            largeImageDiv.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
