@@ -152,6 +152,18 @@
             // レアリティを決定する
             const rarity = getRarity();
 
+             // インベントリを保存する関数
+        function saveInventory(inventory) {
+            localStorage.setItem('userInventory', JSON.stringify(inventory));
+        }
+
+        // インベントリを読み込む関数
+        function loadInventory() {
+            const inventory = localStorage.getItem('userInventory');
+            return inventory ? JSON.parse(inventory) : {};
+        }
+
+
             // ステータスをランダムに設定
             const stats = {};
             for (const statName of statNames) {
@@ -168,6 +180,10 @@
             // インベントリを表示
             displayInventory();
         }
+
+        // ページ読み込み時にインベントリを読み込む
+        window.onload = function() {
+            displayInventory();
 
         // インベントリの表示・非表示を切り替える関数
         function toggleInventory() {
